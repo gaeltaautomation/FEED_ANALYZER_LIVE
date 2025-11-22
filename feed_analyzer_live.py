@@ -2,12 +2,8 @@ import streamlit as st    # Toto umožní použít webové rozhraní místo klas
 import lxml.etree as ET   # Vaše XML knihovna
 from collections import Counter, defaultdict  # Potřebné pro statistiky
 
-
 # Funkce
 #-------
-
-INPUT_FILE = "feed.xml"
-OUTPUT_FILE = "feed_analysis.md"
 
 # Funkce pro načtení souboru
 # --------------------------
@@ -68,8 +64,6 @@ def zapis_report(soubor, root_tag, produkt_tag, pocet, vyplneno, prazdno, celkem
         prazd = prazdno.get(pole, 0)
         procenta = 100 * plne / celkem_produkty if celkem_produkty else 0
         soubor.write(f"- `{pole}`: vyplněno {plne}/{celkem_produkty} ({procenta:.2f} %), prázdné {prazd}/{celkem_produkty}\n")
-
-            
 
 # --------------------------------------------------------------
 # Funkce pro DETEKCI STRUKTURY VARIANT PRODUKTŮ
@@ -152,7 +146,6 @@ def zapis_opakujici_se_hodnoty(soubor, opakovane_hodnoty):
             soubor.write(f"    - '{hodnota}': {count}×\n")
         soubor.write("\n")
         
-        
 # Streamlit část pro nahrání souboru
 #-----------------------------------
 
@@ -178,21 +171,6 @@ if uploaded_file:
     vysledek = f.getvalue()
 
     st.markdown(vysledek)
+else:
+    st.info("Nejprve nahrajte XML soubor.")
 
-# ---- Hlavní blok ----
-#--------------------------------
-
-if __name__ == "__main__":
-    strom = nacti_xml_cesta(INPUT_FILE)
-    root_tag, produkt_tag, pocet = detekuj_root_a_produkt(strom)
-    vyplneno, prazdno, celkem_produkty = statistika_poli(strom, produkt_tag)
-    variantni_pole = najdi_variantni_pole(strom, produkt_tag)
-    skupiny, bez_varianty = analyzuj_varianty(strom, produkt_tag, variantni_pole)
-    opakovane_hodnoty = detekuj_opakujici_se_hodnoty(strom, produkt_tag)
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        zapis_report(f, root_tag, produkt_tag, pocet, vyplneno, prazdno, celkem_produkty)
-        zapis_variantni_statistiku(f, variantni_pole, skupiny, bez_varianty)
-        zapis_opakujici_se_hodnoty(f, opakovane_hodnoty)
-
-    print(f"Hotovo! Výsledek najdete v souboru `{OUTPUT_FILE}`.")
