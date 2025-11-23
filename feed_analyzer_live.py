@@ -42,7 +42,7 @@ def statistika_poli(tree, produkt_tag):
         for polozka in produkt:
             pole = polozka.tag.split("}")[-1]
             text = (polozka.text or "").strip()
-            if text:
+            if text or len(polozka) > 0 or polozka.attrib:
                 vyplneno[pole] += 1
             else:
                 prazdno[pole] += 1
@@ -70,16 +70,24 @@ def zapis_report(soubor, root_tag, produkt_tag, pocet, vyplneno, prazdno, celkem
 # Varianty detekujeme podle typických polí v každém produktu.
 # --------------------------------------------------------------
 
+
 # Funkce pro detekci variantních polí
 # -----------------------------------
 def najdi_variantni_pole(tree, produkt_tag):
+    keywords = [
+        "variant", "variants", "group", "group_id", "item_group_id", "parent", "parent_id", "family", "family_id",
+        "set", "skupina", "subgroup", "collection", "main", "bundle", "var_id", "varianta", "code", "option"
+    ]
     kandidati = set()
     for produkt in tree.iterfind(f".//{produkt_tag}"):
         for polozka in produkt:
             pole = polozka.tag.lower()
-            if any(klic in pole for klic in ["group", "parent", "variant"]):
-                kandidati.add(polozka.tag.split("}")[-1])
+            if any(klic in pole for klic in keywords):
+                # Pravidlo: musí mít text, podprvky nebo atributy
+                if (polozka.text and polozka.text.strip()) or len(polozka) > 0 or polozka.attrib:
+                    kandidati.add(polozka.tag.split("}")[-1])
     return sorted(list(kandidati))
+
 
 # Funkce pro analýzu variantních skupin
 # -------------------------------------
@@ -87,16 +95,25 @@ def analyzuj_varianty(tree, produkt_tag, variantni_pole):
     skupiny = defaultdict(list)
     bez_varianty = []
     for produkt in tree.iterfind(f".//{produkt_tag}"):
+        kod = produkt.find('CODE')
+        group_key = kod.text.strip() if kod is not None and kod.text else "NEZNAMY_PRODUKT"
         nalezeno = False
         for pole in variantni_pole:
             elem = produkt.find(pole)
-            if elem is not None and elem.text and elem.text.strip():
+            # Pokud pole existuje a má podprvky = variantní pole (např. VARIANTS, GROUPS apod.)
+            if elem is not None and len(elem) > 0:
+                skupiny[group_key].extend(list(elem))
+                nalezeno = True
+                break
+            # Pokud pole má text hodnotu, použije se původní logika
+            elif elem is not None and elem.text and elem.text.strip():
                 skupiny[elem.text.strip()].append(produkt)
                 nalezeno = True
                 break
         if not nalezeno:
             bez_varianty.append(produkt)
     return skupiny, bez_varianty
+
 
 # Funkce pro zápis statistiky variant do markdown reportu
 # -------------------------------------------------------
@@ -113,6 +130,7 @@ def zapis_variantni_statistiku(soubor, variantni_pole, skupiny, bez_varianty):
     pro_top = sorted(skupiny.items(), key=lambda x: len(x[1]), reverse=True)[:10]
     for group, produkty in pro_top:
         soubor.write(f"- skupina {group}: {len(produkty)} variant\n")
+
 
 # Funkce pro detekci opakujících se hodnot v polích
 # -------------------------------------------------
