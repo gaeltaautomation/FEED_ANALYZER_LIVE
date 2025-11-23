@@ -75,18 +75,19 @@ def zapis_report(soubor, root_tag, produkt_tag, pocet, vyplneno, prazdno, celkem
 # -----------------------------------
 def najdi_variantni_pole(tree, produkt_tag):
     keywords = [
-        "variant", "variants", "group", "group_id", "item_group_id", "parent", "parent_id", "family", "family_id",
-        "set", "skupina", "subgroup", "collection", "main", "bundle", "var_id", "varianta", "code", "option"
+        "variant", "variants", "group", "group_id", "item_group_id", "parent", "parent_id",
+        "family", "family_id", "set", "skupina", "subgroup", "collection", "main",
+        "bundle", "var_id", "varianta", "option"
     ]
     kandidati = set()
     for produkt in tree.iterfind(f".//{produkt_tag}"):
         for polozka in produkt:
             pole = polozka.tag.lower()
             if any(klic in pole for klic in keywords):
-                # Pravidlo: musí mít text, podprvky nebo atributy
                 if (polozka.text and polozka.text.strip()) or len(polozka) > 0 or polozka.attrib:
                     kandidati.add(polozka.tag.split("}")[-1])
     return sorted(list(kandidati))
+
 
 
 # Funkce pro analýzu variantních skupin
